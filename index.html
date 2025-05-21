@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>HiDef Translator</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: url('contours-bg.png') no-repeat center center fixed;
+      background-size: cover;
+      margin: 0;
+      padding: 0;
+      color: #222;
+    }
+
+    header {
+      background: white;
+      padding: 15px 30px;
+      display: flex;
+      align-items: center;
+      border-bottom: 1px solid #ddd;
+    }
+
+    header img {
+      height: 40px;
+      margin-right: 20px;
+    }
+
+    h1 {
+      font-size: 22px;
+      margin: 0;
+    }
+
+    main {
+      max-width: 960px;
+      margin: 40px auto;
+      background: rgba(255, 255, 255, 0.95);
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    textarea {
+      width: 100%;
+      height: 120px;
+      margin-bottom: 20px;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 15px;
+      resize: vertical;
+    }
+
+    button {
+      padding: 12px 25px;
+      font-size: 16px;
+      background: #d43f3a;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-top: 20px;
+    }
+
+    .output {
+      background: #f9f9f9;
+      border: 1px solid #ddd;
+      padding: 15px;
+      white-space: pre-wrap;
+      border-radius: 6px;
+      margin-top: 10px;
+    }
+
+    h3 {
+      margin-top: 30px;
+    }
+
+    #copyMessage {
+      color: green;
+      margin-top: 10px;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <img src="hidef-logo.png" alt="HiDef Logo">
+    <h1>HiDef Translator</h1>
+  </header>
+
+  <main>
+    <h2>Email Translator (EN, FR, DE)</h2>
+    <textarea id="inputText" placeholder="Paste your email here..."></textarea><br>
+    <button onclick="translateText()">Translate</button>
+
+    <h3 id="heading1"></h3>
+    <div class="output" id="translation1"></div>
+
+    <h3 id="heading2"></h3>
+    <div class="output" id="translation2"></div>
+
+    <button onclick="copyTranslations()">Copy Translations</button>
+    <div id="copyMessage">✅ Translations copied to clipboard!</div>
+  </main>
+
+  <script>
+    let headingText1 = "";
+    let headingText2 = "";
+
+    async function detectLanguage(text) {
+      const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=en&dt=t&q=${encodeURIComponent(text)}`;
+      const res = await fetch(url);
+      const data = await res.json();
+      return data[2]; // 'en', 'fr', 'de'
+    }
+
+    async function translate(text, from, to) {
+      const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${from}&tl=${to}&dt=t&q=${encodeURIComponent(text)}`;
+      const res = await fetch(url);
+      const data = await res.json();
+      return data[0].map(segment => segment[0]).join('');
+    }
+
+    async function translateText() {
+      const input = document.getElementById("inputText").value;
+      if (!input.trim()) return;
+
+      const from = await detectLanguage(input);
+
+      let targets = [];
+      if (from === "en") {
+        targets = ["fr", "de"];
+        headingText1 = "French Translation";
+        headingText2 = "German Translation";
+      } else if (from === "fr") {
+        targets = ["en", "de"];
+        headingText1 = "English Translation";
+        headingText2 = "German Translation";
+      } else if (from === "de") {
+        targets = ["en", "fr"];
+        headingText1 = "English Translation";
+        headingText2 = "French Translation";
+      } else {
+        alert("Unsupported language detected.");
+        return;
+      }
+
+      const translated1 = await translate(input, from, targets[0]);
+      const translated2 = await translate(input, from, targets[1]);
+
+      document.getElementById("heading1").innerText = headingText1 + ":";
+      document.getElementById("translation1").innerText = translated1;
+
+      document.getElementById("heading2").innerText = headingText2 + ":";
+      document.getElementById("translation2").innerText = translated2;
+
+      document.getElementById("copyMessage").style.display = "none";
+    }
+
+    function copyTranslations() {
+      const text1 = document.getElementById("translation1").innerText;
+      const text2 = document.getElementById("translation2").innerText;
+      const combined = `${headingText1}:\n${text1}\n\n${headingText2}:\n${text2}`;
+
+      navigator.clipboard.writeText(combined).then(() => {
+        document.getElementById("copyMessage").style.display = "block";
+      });
+    }
+  </script>
+
+</body>
+</html>
